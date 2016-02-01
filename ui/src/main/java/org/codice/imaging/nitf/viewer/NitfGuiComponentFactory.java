@@ -4,10 +4,11 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.GridLayout;
+import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.util.HashSet;
@@ -39,13 +40,7 @@ class NitfGuiComponentFactory {
     static JSplitPane getjSplitPane(final BufferedImage bufferedImage,
             final NitfFileHeader fileHeader,
             final NitfImageSegmentHeader header) {
-        JPanel imagePanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.drawImage(bufferedImage, 0, 0, null);
-            }
-        };
+        PaintSurface imagePanel = new PaintSurface(bufferedImage);
 
         imagePanel.setPreferredSize(new Dimension(bufferedImage.getWidth(),
                 bufferedImage.getHeight()));
@@ -99,7 +94,12 @@ class NitfGuiComponentFactory {
 
     private static JTable getImagePropertyTable(NitfImageSegmentHeader header) {
         String[][] data =
-                {{"Identifier: ", header.getIdentifier()}, {"Source: ", header.getImageSource()},
+                {{"Identifier: ", header.getIdentifier()},
+                        {"Source: ", header.getImageSource()},
+                        {"Horizontal Pixels/Block", "" + header.getNumberOfPixelsPerBlockHorizontal()},
+                        {"Vertical Pixels/Block", "" + header.getNumberOfPixelsPerBlockVertical()},
+                        {"Block Size:", "" + header.getNumberOfPixelsPerBlockHorizontal() *
+                                header.getNumberOfPixelsPerBlockVertical()},
                         {"Blocks/Row: ", "" + header.getNumberOfBlocksPerRow()},
                         {"Blocks/Column: ", "" + header.getNumberOfBlocksPerColumn()},
                         {"Rows: ", "" + header.getNumberOfRows()},
@@ -142,15 +142,31 @@ class NitfGuiComponentFactory {
     }
 
     static BufferedImage getDisplayedImage(JTabbedPane mainPanel) {
-        JSplitPane currentTab = (JSplitPane) mainPanel.getSelectedComponent();
-        JScrollPane scrollPane = (JScrollPane) currentTab.getLeftComponent();
-        JViewport viewport = (JViewport) scrollPane.getComponent(0);
-        JComponent imagePanel = (JComponent) viewport.getComponent(0);
+        JComponent imagePanel = getVisibleImageComponent(mainPanel);
         BufferedImage bi = new BufferedImage(imagePanel.getWidth(),
                 imagePanel.getHeight(),
                 BufferedImage.TYPE_INT_ARGB);
         imagePanel.paint(bi.getGraphics());
         return bi;
+    }
+
+    static BufferedImage getSelectedAreaOfImage(JTabbedPane mainPanel) {
+        PaintSurface imagePanel = getVisibleImageComponent(mainPanel);
+        Shape s = imagePanel.getSelectedArea();
+        Rectangle2D bounds = s.getBounds2D();
+
+        BufferedImage bi = new BufferedImage((int) (bounds.getMaxX() - bounds.getMinX()),
+                (int) (bounds.getMaxY() - bounds.getMinY()), BufferedImage.TYPE_INT_ARGB);
+
+        imagePanel.paintImmediately(s.getBounds());
+        return bi;
+    }
+
+    private static PaintSurface getVisibleImageComponent(JTabbedPane mainPanel) {
+        JSplitPane currentTab = (JSplitPane) mainPanel.getSelectedComponent();
+        JScrollPane scrollPane = (JScrollPane) currentTab.getLeftComponent();
+        JViewport viewport = (JViewport) scrollPane.getComponent(0);
+        return (PaintSurface) viewport.getComponent(0);
     }
 
     static void startProgressMonitor(ProgressMonitor progressMonitor, int initialProgress, int maxIncrement) {

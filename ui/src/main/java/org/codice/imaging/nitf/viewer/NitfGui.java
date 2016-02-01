@@ -1,6 +1,7 @@
 package org.codice.imaging.nitf.viewer;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -13,14 +14,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingWorker;
@@ -31,9 +36,13 @@ import org.codice.imaging.nitf.core.NitfFileHeader;
 import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
 import org.codice.imaging.nitf.render.NitfRenderer;
 import org.codice.imaging.nitf.render.flow.NitfParserInputFlow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.coobird.thumbnailator.Thumbnails;
 
 public class NitfGui {
+    private static final Logger USER_LOGGER = LoggerFactory.getLogger(JTextArea.class);
+
     private static final Map<String, NitfFileHeader> FILE_HEADER_MAP = new HashMap<>();
 
     private final static JFileChooser FILE_CHOOSER = new JFileChooser();
@@ -43,6 +52,8 @@ public class NitfGui {
     private static JPanel titlePanel;
 
     private static JFrame topFrame = new JFrame();
+
+    private static JTextArea logPanel = new JTextArea();
 
     public static void main(String... args) throws Exception {
         UIManager.getDefaults().put("TabbedPane.contentBorderInsets", new Insets(0,0,0,0));
@@ -55,10 +66,13 @@ public class NitfGui {
         topFrame.setTitle(NitfGuiComponentFactory.TITLE);
 
         titlePanel = NitfGuiComponentFactory.createTitlePanel();
+        logPanel.setRows(5);
+        logPanel.setEditable(false);
 
         mainPanel.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         topFrame.getContentPane()
                 .add(titlePanel, BorderLayout.CENTER);
+        topFrame.add(logPanel, BorderLayout.SOUTH);
         JMenuBar menuBar = new JMenuBar();
         createFileMenu(topFrame, menuBar);
         createTabMenu(topFrame, menuBar);
@@ -87,7 +101,23 @@ public class NitfGui {
         thumbnailItem.addActionListener(e -> createThumbnail());
         tabMenu.add(thumbnailItem);
 
+        JMenuItem chipItem = new JMenuItem("Create Chip", KeyEvent.VK_H);
+        chipItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ActionEvent.ALT_MASK));
+        chipItem.addActionListener(e -> createChip());
+        tabMenu.add(chipItem);
+
         menuBar.add(tabMenu);
+    }
+
+    private static void createChip() {
+        BufferedImage bi = NitfGuiComponentFactory.getSelectedAreaOfImage(mainPanel);
+        JDialog dialog = new JDialog();
+        JLabel label = new JLabel(new ImageIcon(bi));
+        label.setOpaque(false);
+        
+        dialog.getContentPane().add(label);
+        dialog.setSize(new Dimension(bi.getWidth(), bi.getHeight()));
+        dialog.setVisible(true);
     }
 
     private static void createFileMenu(JFrame jframe, JMenuBar menuBar) {
