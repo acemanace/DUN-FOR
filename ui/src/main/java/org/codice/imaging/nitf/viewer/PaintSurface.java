@@ -3,6 +3,7 @@ package org.codice.imaging.nitf.viewer;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -11,16 +12,19 @@ import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
 
-class PaintSurface extends JComponent {
+class   PaintSurface extends JComponent {
     private Shape shape = null;
 
     private Point startDrag, endDrag;
 
     private BufferedImage background;
+
+    private AffineTransform at = AffineTransform.getScaleInstance(1.0, 1.0);
 
     public PaintSurface(BufferedImage background) {
         this.background = background;
@@ -50,14 +54,16 @@ class PaintSurface extends JComponent {
     }
 
     public void paint(Graphics g) {
+        super.paint(g);
         Graphics2D g2 = (Graphics2D) g;
-        g.drawImage(background, 0, 0, null);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 
-        g2.setStroke(new BasicStroke(2));
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.30f));
+        g2.drawRenderedImage(background, at);
 
         if (shape != null) {
+            g2.setStroke(new BasicStroke(2));
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.30f));
             g2.setPaint(Color.BLACK);
             g2.draw(shape);
             g2.setPaint(Color.YELLOW);
@@ -75,8 +81,30 @@ class PaintSurface extends JComponent {
         return new Rectangle2D.Float(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x1 - x2), Math.abs(y1 - y2));
     }
 
-    public Shape getSelectedArea() {
-        return this.shape;
+    public BufferedImage getSelectedAreaImage () {
+        Rectangle2D bounds = this.shape.getBounds();
+
+        return background.getSubimage((int) (bounds.getX() * (1 / at.getScaleX())),
+                (int) (bounds.getY() * (1 / at.getScaleY())),
+                (int) (bounds.getWidth() * (1 / at.getScaleX())),
+                (int) (bounds.getHeight() * (1 / at.getScaleY())));
+    }
+
+    public BufferedImage getBackgroundImage() {
+        return this.background;
+    }
+
+    public void setScale(double scale) {
+        this.at = AffineTransform.getScaleInstance(scale, scale);
+        getParent().setPreferredSize(new Dimension((int) (background.getWidth() * scale),
+                (int) (background.getHeight() * scale)));
+        this.repaint();
+    }
+
+    public Dimension getPreferredSize() {
+        int w = (int) (at.getScaleX() * background.getWidth());
+        int h = (int) (at.getScaleY() * background.getHeight());
+        return new Dimension(w, h);
     }
 }
 
