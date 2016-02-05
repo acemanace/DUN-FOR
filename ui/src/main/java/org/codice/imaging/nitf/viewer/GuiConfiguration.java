@@ -13,6 +13,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -32,7 +33,7 @@ public class GuiConfiguration {
         frame.setTitle(title());
         frame.getContentPane()
                 .add(titlePanel(), BorderLayout.CENTER);
-        frame.add(logPanel(), BorderLayout.SOUTH);
+        frame.add(new JScrollPane(logPanel(), JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.SOUTH);
         frame.setJMenuBar(mainMenu());
         return frame;
     }
@@ -40,7 +41,8 @@ public class GuiConfiguration {
     @Bean
     public JTextArea logPanel() {
         JTextArea logPanel = new JTextArea();
-        logPanel.setRows(5);
+        logPanel.setRows(4);
+        logPanel.setAutoscrolls(true);
         logPanel.setEditable(false);
         return logPanel;
     }

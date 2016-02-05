@@ -77,8 +77,22 @@ class   PaintSurface extends JComponent {
         }
     }
 
-    private Rectangle2D.Float makeRectangle(int x1, int y1, int x2, int y2) {
-        return new Rectangle2D.Float(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x1 - x2), Math.abs(y1 - y2));
+    private Shape translateShape() {
+        if (this.shape != null) {
+            Rectangle2D bounds = shape.getBounds2D();
+
+            return makeRectangle(
+                    (bounds.getMinX() * at.getScaleX()),
+                    (bounds.getMaxY() * at.getScaleY()),
+                    (bounds.getMaxX() * at.getScaleX()),
+                    (bounds.getMinY() * at.getScaleY()));
+        }
+
+        return null;
+    }
+
+    private Rectangle2D.Double makeRectangle(double x1, double y1, double x2, double y2) {
+        return new Rectangle2D.Double(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x1 - x2), Math.abs(y1 - y2));
     }
 
     public BufferedImage getSelectedAreaImage () {
@@ -96,8 +110,7 @@ class   PaintSurface extends JComponent {
 
     public void setScale(double scale) {
         this.at = AffineTransform.getScaleInstance(scale, scale);
-        getParent().setPreferredSize(new Dimension((int) (background.getWidth() * scale),
-                (int) (background.getHeight() * scale)));
+        this.shape = null;
         this.repaint();
     }
 

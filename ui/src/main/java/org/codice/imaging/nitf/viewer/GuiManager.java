@@ -19,6 +19,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileFilter;
@@ -48,6 +49,10 @@ public class GuiManager {
     @Autowired
     private JPanel titlePanel;
 
+    @Autowired
+    private JTextArea logPanel;
+
+    private static final int MAX_CHIP_ZOOM = 1200;
 
     private static final Map<String, NitfFileHeader> FILE_HEADER_MAP = new HashMap<>();
 
@@ -95,16 +100,16 @@ public class GuiManager {
         progressMonitor.setProgress(progressMonitor.getMaximum());
     }
 
-    public void createChip(String clipName) {
+    public void createChip(String chipName) {
         BufferedImage bi = getActivePaintSurface().getSelectedAreaImage();
         JDialog dialog = new JDialog();
-        ImagePanel imagePanel = new ImagePanel(bi, 800);
+        ImagePanel imagePanel = new ImagePanel(bi, MAX_CHIP_ZOOM);
         imagePanel.setOpaque(false);
 
-        dialog.setTitle(clipName);
+        dialog.setTitle(chipName);
         dialog.getContentPane().setLayout(new BorderLayout());
         dialog.getContentPane().add(imagePanel, BorderLayout.CENTER);
-        dialog.setSize(new Dimension(bi.getWidth(), bi.getHeight() + 25));
+        dialog.setSize(new Dimension(bi.getWidth() + 25, bi.getHeight() + 50));
         dialog.setLocation(220, 120);
         dialog.setVisible(true);
         imagePanel.repaint();
@@ -118,6 +123,7 @@ public class GuiManager {
 
         if (c == JFileChooser.APPROVE_OPTION) {
             File outputFile = fileChooser.getSelectedFile();
+            info("Saving file: " + outputFile.getName());
 
             ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
                     "Saving File... ",
@@ -132,6 +138,7 @@ public class GuiManager {
                 protected Void doInBackground() throws IOException {
                     ImageIO.write(bi, "png", outputFile);
                     haltProgressMonitor(progressMonitor);
+                    info("File saved.");
                     return null;
                 }
             };
@@ -160,6 +167,7 @@ public class GuiManager {
             SwingWorker<Void, Void> worker = new SwingWorker() {
                 protected Object doInBackground() {
                     try {
+                        info("Creating thumbnail: " + fileChooser.getSelectedFile().getName());
                         startProgressMonitor(progressMonitor, 1, 3);
                         File tempFile =
                                 File.createTempFile(mainPanel.getTitleAt(mainPanel.getSelectedIndex()),
@@ -171,10 +179,14 @@ public class GuiManager {
                                 .outputFormat("jpg")
                                 .toFile(fileChooser.getSelectedFile());
 
-                        tempFile.delete();
+                        if (tempFile.exists()) {
+                            tempFile.delete();
+                        }
+
                         haltProgressMonitor(progressMonitor);
+                        info("Thumbnail created.");
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        error("Thumbnail failed: " + e.getMessage());
                     }
                     return null;
                 }
@@ -213,6 +225,7 @@ public class GuiManager {
         startProgressMonitor(progressMonitor, 0, 5);
 
         try {
+            info("Parsing file: " + nitfRgbFile.getName());
             new NitfParserInputFlow().file(nitfRgbFile)
                     .imageData()
                     .fileHeader(header -> FILE_HEADER_MAP.put(nitfRgbFile.getName(), header))
@@ -222,18 +235,17 @@ public class GuiManager {
                         try {
                             BufferedImage img = renderer.render(segment, bytes);
                             consumer.accept(img, segment);
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        } catch (IOException|UnsupportedOperationException e) {
+                            BufferedImage img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
+                            consumer.accept(img, segment);
+                            error("Couldn't render image: " + e.getMessage());
                         }
                     });
 
+            info("File parsed and rendered.");
             haltProgressMonitor(progressMonitor);
-        } catch (ParseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+        } catch (ParseException|FileNotFoundException e) {
+            error("Couldn't parse file: " + e.getMessage());
         }
     }
 
@@ -245,6 +257,8 @@ public class GuiManager {
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File path = fileChooser.getSelectedFile();
+
+            info("Opening file: " + path.getName());
 
             topFrame.getContentPane()
                     .remove(titlePanel);
@@ -261,7 +275,6 @@ public class GuiManager {
             };
 
             worker.execute();
-
         }
 
         fileChooser.removeChoosableFileFilter(fileFilter);
@@ -282,5 +295,17 @@ public class GuiManager {
                     .add(titlePanel, BorderLayout.CENTER);
             topFrame.repaint();
         }
+    }
+
+    public void info(String message) {
+        logPanel.append(String.format("Info: %s\n", message));
+    }
+
+    public void warning(String message) {
+        logPanel.append(String.format("Warning: %s\n", message));
+    }
+
+    public void error(String message) {
+        logPanel.append(String.format("Error: %s\n", message));
     }
 }
