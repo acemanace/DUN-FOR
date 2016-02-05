@@ -3,6 +3,7 @@ package org.codice.imaging.nitf.viewer;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyVetoException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -14,13 +15,14 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import javax.imageio.ImageIO;
-import javax.swing.JDialog;
+import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.ProgressMonitor;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -35,13 +37,13 @@ import net.coobird.thumbnailator.Thumbnails;
 @Component
 public class GuiManager {
     @Autowired
-    private JTabbedPane mainPanel;
+    private JDesktopPane desktopPane;
 
     @Autowired
     private JFileChooser fileChooser;
 
     @Autowired
-    private JFrame topFrame;
+    private JDesktopPane topFrame;
 
     @Autowired
     private TabPanelFactory tabPanelFactory;
@@ -58,8 +60,15 @@ public class GuiManager {
 
     private static Set<ProgressMonitor> runningMonitors = new HashSet<>();
 
+    public JTabbedPane getActiveTabbedPane() {
+        JInternalFrame internalFrame = desktopPane.getSelectedFrame();
+        JTabbedPane tabbedPane = (JTabbedPane) internalFrame.getContentPane().getComponent(0);
+        return tabbedPane;
+    }
+
     public PaintSurface getActivePaintSurface() {
-        PropertiesImageTab propertiesImageTab = (PropertiesImageTab) mainPanel.getSelectedComponent();
+        JTabbedPane tabbedPane = getActiveTabbedPane();
+        PropertiesImageTab propertiesImageTab = (PropertiesImageTab) tabbedPane.getSelectedComponent();
         return propertiesImageTab.getPaintSurface();
     }
 
@@ -101,17 +110,19 @@ public class GuiManager {
     }
 
     public void createChip(String chipName) {
-        BufferedImage bi = getActivePaintSurface().getSelectedAreaImage();
-        JDialog dialog = new JDialog();
+        PaintSurface activePaintSurface = getActivePaintSurface();
+        BufferedImage bi = activePaintSurface.getSelectedAreaImage();
+        JInternalFrame chipInternalFrame = new JInternalFrame(chipName, true, true, true, true);
+        desktopPane.add(chipInternalFrame);
         ImagePanel imagePanel = new ImagePanel(bi, MAX_CHIP_ZOOM);
         imagePanel.setOpaque(false);
+        imagePanel.getPaintSurface().setScale(activePaintSurface.getScale());
 
-        dialog.setTitle(chipName);
-        dialog.getContentPane().setLayout(new BorderLayout());
-        dialog.getContentPane().add(imagePanel, BorderLayout.CENTER);
-        dialog.setSize(new Dimension(bi.getWidth() + 25, bi.getHeight() + 50));
-        dialog.setLocation(220, 120);
-        dialog.setVisible(true);
+        chipInternalFrame.getContentPane().setLayout(new BorderLayout());
+        chipInternalFrame.getContentPane().add(imagePanel, BorderLayout.CENTER);
+        chipInternalFrame.setSize(new Dimension((int) (bi.getWidth() * activePaintSurface.getScale()),
+                (int) (bi.getHeight() * activePaintSurface.getScale())));
+        chipInternalFrame.setVisible(true);
         imagePanel.repaint();
     }
 
@@ -150,6 +161,7 @@ public class GuiManager {
     }
 
     public void createThumbnail() {
+        JTabbedPane activeTabbedPane = getActiveTabbedPane();
         fileChooser.setDialogTitle("Create thumbnail (.jpg)");
         FileFilter fileFilter = new FileNameExtensionFilter("JPEG File", "jpg", "JPG", "jpeg", "JPEG");
         fileChooser.setFileFilter(fileFilter);
@@ -170,7 +182,7 @@ public class GuiManager {
                         info("Creating thumbnail: " + fileChooser.getSelectedFile().getName());
                         startProgressMonitor(progressMonitor, 1, 3);
                         File tempFile =
-                                File.createTempFile(mainPanel.getTitleAt(mainPanel.getSelectedIndex()),
+                                File.createTempFile(activeTabbedPane.getTitleAt(activeTabbedPane.getSelectedIndex()),
                                         ".tmp");
                         ImageIO.write(bi, "jpg", tempFile);
 
@@ -198,8 +210,8 @@ public class GuiManager {
         fileChooser.removeChoosableFileFilter(fileFilter);
     }
 
-    private void addImageToFrame(File imagePath, BufferedImage bufferedImage,
-            NitfImageSegmentHeader imageSegmentHeader) {
+    private void addPropertiesImageTabToFrame(File imagePath, BufferedImage bufferedImage,
+            NitfImageSegmentHeader imageSegmentHeader, JTabbedPane mainPanel) {
         String tabName = imagePath.getName();
         tabName = tabName.substring(0, tabName.length() - 4);
 
@@ -212,6 +224,8 @@ public class GuiManager {
         mainPanel.addTab(tabName, propertiesImageTab);
         mainPanel.setSelectedComponent(propertiesImageTab);
         mainPanel.setTabComponentAt(mainPanel.getSelectedIndex(), tab);
+
+        SwingUtilities.invokeLater(() -> propertiesImageTab.setDividerLocation(0.85d));
     }
 
     private void render(File nitfRgbFile,
@@ -249,6 +263,22 @@ public class GuiManager {
         }
     }
 
+    private JTabbedPane prepareNewFrame(String frameName) {
+        JInternalFrame internalFrame = new JInternalFrame(frameName, true, true, true, true);
+        desktopPane.add(internalFrame);
+        internalFrame.setVisible(true);
+
+        try {
+            internalFrame.setMaximum(true);
+        } catch (PropertyVetoException e) {
+            e.printStackTrace();
+        }
+
+        JTabbedPane mainPanel = new JTabbedPane();
+        internalFrame.getContentPane().add(mainPanel, BorderLayout.CENTER);
+        return mainPanel;
+    }
+
     public void openFile() {
         fileChooser.setDialogTitle("Open NITF");
         FileFilter fileFilter = new FileNameExtensionFilter("NITF File", "ntf", "nitf", "nsf", "NTF", "NITF", "NSF");
@@ -257,18 +287,14 @@ public class GuiManager {
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File path = fileChooser.getSelectedFile();
+            JTabbedPane mainPanel = prepareNewFrame(path.getName());
 
             info("Opening file: " + path.getName());
-
-            topFrame.getContentPane()
-                    .remove(titlePanel);
-            topFrame.getContentPane()
-                    .add(mainPanel, BorderLayout.CENTER);
 
             SwingWorker<Void, Void> worker = new SwingWorker() {
                 @Override
                 protected Object doInBackground() throws Exception {
-                    render(path, (img, header) -> addImageToFrame(path, img, header));
+                    render(path, (img, header) -> addPropertiesImageTabToFrame(path, img, header, mainPanel));
                     System.gc();
                     return null;
                 }
@@ -281,18 +307,20 @@ public class GuiManager {
     }
 
     public void closeTab(String tabName) {
+        JTabbedPane mainPanel = getActiveTabbedPane();
         int index = mainPanel.indexOfTab(tabName);
         closeTab(index);
     }
 
     public void closeTab(int index) {
+        JTabbedPane mainPanel = getActiveTabbedPane();
         mainPanel.removeTabAt(index);
         System.gc();
 
         if (mainPanel.getSelectedIndex() == -1) {
-            topFrame.getContentPane().remove(mainPanel);
-            topFrame.getContentPane()
-                    .add(titlePanel, BorderLayout.CENTER);
+//            topFrame.getContentPane().remove(mainPanel);
+//            topFrame.getContentPane()
+//                    .add(titlePanel, BorderLayout.CENTER);
             topFrame.repaint();
         }
     }

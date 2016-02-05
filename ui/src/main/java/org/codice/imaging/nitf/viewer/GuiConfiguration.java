@@ -1,19 +1,20 @@
 package org.codice.imaging.nitf.viewer;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.beans.PropertyVetoException;
+import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -24,16 +25,23 @@ import org.springframework.context.annotation.Configuration;
 public class GuiConfiguration {
 
     @Bean
-    public JFrame topFrame() {
+    public JDesktopPane desktopPane() {
+        JDesktopPane desktopPane = new JDesktopPane();
+        desktopPane.setBackground(Color.GRAY);
+        desktopPane.setLayer(titlePanel(), JLayeredPane.FRAME_CONTENT_LAYER);
+        desktopPane.add(titlePanel());
+        return desktopPane;
+    }
+
+    @Bean
+    public JFrame topFrame() throws PropertyVetoException {
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocation(200, 50);
         frame.setSize(1000, 600);
-        frame.setLayout(new BorderLayout());
+        //frame.setLayout(new BorderLayout());
         frame.setTitle(title());
-        frame.getContentPane()
-                .add(titlePanel(), BorderLayout.CENTER);
-        frame.add(new JScrollPane(logPanel(), JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.SOUTH);
+        frame.setContentPane(desktopPane());
         frame.setJMenuBar(mainMenu());
         return frame;
     }

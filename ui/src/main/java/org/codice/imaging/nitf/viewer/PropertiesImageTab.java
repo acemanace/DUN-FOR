@@ -37,7 +37,7 @@ public class PropertiesImageTab extends JSplitPane {
 
         this.setLeftComponent(imagePanel);
         this.setRightComponent(propertiesPane);
-        this.setDividerLocation(750);
+        this.setDividerLocation(0.2d);
     }
 
     private static JTable getFilePropertyTable(NitfFileHeader header) {

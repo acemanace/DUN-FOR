@@ -3,6 +3,7 @@ package org.codice.imaging.nitf.viewer;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -111,13 +112,17 @@ class   PaintSurface extends JComponent {
     public void setScale(double scale) {
         this.at = AffineTransform.getScaleInstance(scale, scale);
         this.shape = null;
-        this.repaint();
+        Container component = this;
     }
 
     public Dimension getPreferredSize() {
         int w = (int) (at.getScaleX() * background.getWidth());
         int h = (int) (at.getScaleY() * background.getHeight());
         return new Dimension(w, h);
+    }
+
+    public double getScale() {
+        return at.getScaleX();
     }
 }
 
