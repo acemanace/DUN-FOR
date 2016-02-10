@@ -1,7 +1,6 @@
 package org.codice.imaging.nitf.viewer;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyVetoException;
 import java.io.File;
@@ -31,12 +30,14 @@ import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
 import org.codice.imaging.nitf.render.NitfRenderer;
 import org.codice.imaging.nitf.render.flow.NitfParserInputFlow;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import net.coobird.thumbnailator.Thumbnails;
 
 @Component
 public class GuiManager {
     @Autowired
+    @Qualifier
     private JDesktopPane desktopPane;
 
     @Autowired
@@ -94,6 +95,7 @@ public class GuiManager {
                     runningMonitors.remove(progressMonitor);
                 }
 
+                progressMonitor.setProgress(progressMonitor.getMaximum());
                 return null;
             }
         };
@@ -102,11 +104,14 @@ public class GuiManager {
     }
 
     static void haltProgressMonitor(ProgressMonitor progressMonitor) {
-        if (runningMonitors.contains(progressMonitor)) {
-            runningMonitors.remove(progressMonitor);
-        }
 
-        progressMonitor.setProgress(progressMonitor.getMaximum());
+        SwingUtilities.invokeLater( () -> {
+            if (runningMonitors.contains(progressMonitor)) {
+                runningMonitors.remove(progressMonitor);
+            }
+
+            progressMonitor.setProgress(progressMonitor.getMaximum());
+        } );
     }
 
     public void createChip(String chipName) {
@@ -118,11 +123,10 @@ public class GuiManager {
         imagePanel.setOpaque(false);
         imagePanel.getPaintSurface().setScale(activePaintSurface.getScale());
 
+        chipInternalFrame.setVisible(true);
         chipInternalFrame.getContentPane().setLayout(new BorderLayout());
         chipInternalFrame.getContentPane().add(imagePanel, BorderLayout.CENTER);
-        chipInternalFrame.setSize(new Dimension((int) (bi.getWidth() * activePaintSurface.getScale()),
-                (int) (bi.getHeight() * activePaintSurface.getScale())));
-        chipInternalFrame.setVisible(true);
+        chipInternalFrame.setSize(imagePanel.getPreferredSize());
         imagePanel.repaint();
     }
 
@@ -178,28 +182,12 @@ public class GuiManager {
 
             SwingWorker<Void, Void> worker = new SwingWorker() {
                 protected Object doInBackground() {
-                    try {
                         info("Creating thumbnail: " + fileChooser.getSelectedFile().getName());
-                        startProgressMonitor(progressMonitor, 1, 3);
-                        File tempFile =
-                                File.createTempFile(activeTabbedPane.getTitleAt(activeTabbedPane.getSelectedIndex()),
-                                        ".tmp");
-                        ImageIO.write(bi, "jpg", tempFile);
-
-                        Thumbnails.of(tempFile)
-                                .size(200, 200)
-                                .outputFormat("jpg")
-                                .toFile(fileChooser.getSelectedFile());
-
-                        if (tempFile.exists()) {
-                            tempFile.delete();
-                        }
+                        startProgressMonitor(progressMonitor, 10, 3);
+                        createThumbnail(bi, fileChooser.getSelectedFile());
 
                         haltProgressMonitor(progressMonitor);
                         info("Thumbnail created.");
-                    } catch (IOException e) {
-                        error("Thumbnail failed: " + e.getMessage());
-                    }
                     return null;
                 }
             };
@@ -208,6 +196,26 @@ public class GuiManager {
         }
 
         fileChooser.removeChoosableFileFilter(fileFilter);
+    }
+
+    private void createThumbnail(BufferedImage bi, File thumbnailFile) {
+        File tempFile = null;
+
+        try {
+            tempFile = File.createTempFile(thumbnailFile.getName(), ".tmp");
+            ImageIO.write(bi, "jpg", tempFile);
+
+            Thumbnails.of(tempFile)
+                    .size(200, 200)
+                    .outputFormat("jpg")
+                    .toFile(fileChooser.getSelectedFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+        }
     }
 
     private void addPropertiesImageTabToFrame(File imagePath, BufferedImage bufferedImage,
@@ -230,15 +238,12 @@ public class GuiManager {
 
     private void render(File nitfRgbFile,
             BiConsumer<BufferedImage, NitfImageSegmentHeader> consumer) {
-        ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
-                "Loading File: " + nitfRgbFile.getName(),
-                "",
-                0,
-                100);
 
-        startProgressMonitor(progressMonitor, 0, 5);
+        ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
+                "Loading File: " + nitfRgbFile.getName(), "", 0, 100);
 
         try {
+            startProgressMonitor(progressMonitor, 0, 5);
             info("Parsing file: " + nitfRgbFile.getName());
             new NitfParserInputFlow().file(nitfRgbFile)
                     .imageData()
@@ -257,9 +262,10 @@ public class GuiManager {
                     });
 
             info("File parsed and rendered.");
-            haltProgressMonitor(progressMonitor);
         } catch (ParseException|FileNotFoundException e) {
             error("Couldn't parse file: " + e.getMessage());
+        } finally {
+            haltProgressMonitor(progressMonitor);
         }
     }
 
@@ -318,9 +324,6 @@ public class GuiManager {
         System.gc();
 
         if (mainPanel.getSelectedIndex() == -1) {
-//            topFrame.getContentPane().remove(mainPanel);
-//            topFrame.getContentPane()
-//                    .add(titlePanel, BorderLayout.CENTER);
             topFrame.repaint();
         }
     }

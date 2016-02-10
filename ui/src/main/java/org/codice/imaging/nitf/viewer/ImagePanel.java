@@ -26,6 +26,10 @@ public class ImagePanel extends JPanel {
 
         slider = new JSlider(1, maxZoom);
         slider.setValue(100);
+        slider.setMajorTickSpacing(20);
+        slider.setMinorTickSpacing(2);
+        slider.setPaintTicks(true);
+        slider.setSnapToTicks(true);
         slider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -38,6 +42,11 @@ public class ImagePanel extends JPanel {
         });
 
         this.add(slider, BorderLayout.SOUTH);
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return ((BorderLayout) this.getLayout()).preferredLayoutSize(this);
     }
 
     public PaintSurface getPaintSurface() {

@@ -9,7 +9,7 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <imaging-nitf.verison>0.2</imaging-nitf.verison>
+        <imaging-nitf.verison>0.3-SNAPSHOT</imaging-nitf.verison>
         <spring-framework.version>4.2.4.RELEASE</spring-framework.version>
     </properties>
     <dependencies>

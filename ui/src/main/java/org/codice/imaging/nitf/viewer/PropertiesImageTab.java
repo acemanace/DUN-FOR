@@ -1,11 +1,15 @@
 package org.codice.imaging.nitf.viewer;
 
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 import org.codice.imaging.nitf.core.NitfFileHeader;
+import org.codice.imaging.nitf.core.image.ImageCoordinatePair;
+import org.codice.imaging.nitf.core.image.ImageCoordinates;
 import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
 import org.codice.imaging.nitf.core.security.FileSecurityMetadata;
 
@@ -37,7 +41,8 @@ public class PropertiesImageTab extends JSplitPane {
 
         this.setLeftComponent(imagePanel);
         this.setRightComponent(propertiesPane);
-        this.setDividerLocation(0.2d);
+
+        SwingUtilities.invokeLater(() -> propertiesPane.setDividerLocation(0.7d));
     }
 
     private static JTable getFilePropertyTable(NitfFileHeader header) {
@@ -64,6 +69,8 @@ public class PropertiesImageTab extends JSplitPane {
     }
 
     private JTable getImagePropertyTable(NitfImageSegmentHeader header) {
+        ImageCoordinates imageCoordinates = header.getImageCoordinates();
+
         String[][] data = {{"Identifier: ", header.getIdentifier()},
             {"Source: ", header.getImageSource()},
             {"Horizontal Pixels/Block",
@@ -82,12 +89,27 @@ public class PropertiesImageTab extends JSplitPane {
             {"bpp/Band:", "" + header.getActualBitsPerPixelPerBand()},
             {"Bands:", "" + header.getNumBands()},
             {"Pixel Value Type:", header.getPixelValueType().name()},
-            {"Pixel Justification:", header.getPixelJustification().name()} };
+            {"Pixel Justification:", header.getPixelJustification().name()},
+            {"Image Coordinates:", ""},
+            {"    Coord 0,0:", getImageCoordinate(imageCoordinates, () -> imageCoordinates.getCoordinate00())},
+            {"    Coord 0,max:", getImageCoordinate(imageCoordinates, () -> imageCoordinates.getCoordinate0MaxCol())},
+            {"    Coord max,max:", getImageCoordinate(imageCoordinates, () -> imageCoordinates.getCoordinateMaxRowMaxCol())},
+            {"    Coord max,0:", getImageCoordinate(imageCoordinates, () -> imageCoordinates.getCoordinateMaxRow0())},
+        };
 
         String[] headers = {"Property", "Value"};
         JTable imageProperties = new JTable(data, headers);
         imageProperties.setShowGrid(false);
         return imageProperties;
+    }
+
+    private String getImageCoordinate(ImageCoordinates imageCoordinates, Supplier<ImageCoordinatePair> supplier) {
+        if (imageCoordinates != null) {
+            ImageCoordinatePair icp = supplier.get();
+            return String.format("%5f, %5f", icp.getLatitude(), icp.getLongitude());
+        }
+
+        return "";
     }
 
     public PaintSurface getPaintSurface() {

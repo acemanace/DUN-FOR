@@ -6,11 +6,11 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.beans.PropertyVetoException;
+import java.io.IOException;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JLayeredPane;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -25,21 +25,20 @@ import org.springframework.context.annotation.Configuration;
 public class GuiConfiguration {
 
     @Bean
-    public JDesktopPane desktopPane() {
+    public JDesktopPane desktopPane() throws IOException {
         JDesktopPane desktopPane = new JDesktopPane();
+
         desktopPane.setBackground(Color.GRAY);
-        desktopPane.setLayer(titlePanel(), JLayeredPane.FRAME_CONTENT_LAYER);
         desktopPane.add(titlePanel());
         return desktopPane;
     }
 
     @Bean
-    public JFrame topFrame() throws PropertyVetoException {
+    public JFrame topFrame() throws PropertyVetoException, IOException {
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocation(200, 50);
         frame.setSize(1000, 600);
-        //frame.setLayout(new BorderLayout());
         frame.setTitle(title());
         frame.setContentPane(desktopPane());
         frame.setJMenuBar(mainMenu());
