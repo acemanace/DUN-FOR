@@ -30,27 +30,19 @@ import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
 import org.codice.imaging.nitf.render.NitfRenderer;
 import org.codice.imaging.nitf.render.flow.NitfParserInputFlow;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import net.coobird.thumbnailator.Thumbnails;
 
 @Component
 public class GuiManager {
     @Autowired
-    @Qualifier
     private JDesktopPane desktopPane;
 
     @Autowired
     private JFileChooser fileChooser;
 
     @Autowired
-    private JDesktopPane topFrame;
-
-    @Autowired
     private TabPanelFactory tabPanelFactory;
-
-    @Autowired
-    private JPanel titlePanel;
 
     @Autowired
     private JTextArea logPanel;
@@ -134,13 +126,13 @@ public class GuiManager {
         fileChooser.setDialogTitle("Save image (.png)");
         FileFilter fileFilter = new FileNameExtensionFilter("PNG File", "png", "PNG");
         fileChooser.setFileFilter(fileFilter);
-        int c = fileChooser.showSaveDialog(topFrame);
+        int c = fileChooser.showSaveDialog(desktopPane);
 
         if (c == JFileChooser.APPROVE_OPTION) {
             File outputFile = fileChooser.getSelectedFile();
             info("Saving file: " + outputFile.getName());
 
-            ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
+            ProgressMonitor progressMonitor = new ProgressMonitor(desktopPane,
                     "Saving File... ",
                     "",
                     0,
@@ -169,10 +161,10 @@ public class GuiManager {
         fileChooser.setDialogTitle("Create thumbnail (.jpg)");
         FileFilter fileFilter = new FileNameExtensionFilter("JPEG File", "jpg", "JPG", "jpeg", "JPEG");
         fileChooser.setFileFilter(fileFilter);
-        int c = fileChooser.showSaveDialog(topFrame);
+        int c = fileChooser.showSaveDialog(desktopPane);
 
         if (c == JFileChooser.APPROVE_OPTION) {
-            ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
+            ProgressMonitor progressMonitor = new ProgressMonitor(desktopPane,
                     "Creating thumbnail...",
                     "",
                     0,
@@ -239,7 +231,7 @@ public class GuiManager {
     private void render(File nitfRgbFile,
             BiConsumer<BufferedImage, NitfImageSegmentHeader> consumer) {
 
-        ProgressMonitor progressMonitor = new ProgressMonitor(topFrame,
+        ProgressMonitor progressMonitor = new ProgressMonitor(desktopPane,
                 "Loading File: " + nitfRgbFile.getName(), "", 0, 100);
 
         try {
@@ -289,7 +281,7 @@ public class GuiManager {
         fileChooser.setDialogTitle("Open NITF");
         FileFilter fileFilter = new FileNameExtensionFilter("NITF File", "ntf", "nitf", "nsf", "NTF", "NITF", "NSF");
         fileChooser.setFileFilter(fileFilter);
-        int userSelection = fileChooser.showOpenDialog(topFrame);
+        int userSelection = fileChooser.showOpenDialog(desktopPane);
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File path = fileChooser.getSelectedFile();
@@ -324,7 +316,7 @@ public class GuiManager {
         System.gc();
 
         if (mainPanel.getSelectedIndex() == -1) {
-            topFrame.repaint();
+            desktopPane.repaint();
         }
     }
 

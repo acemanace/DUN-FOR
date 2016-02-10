@@ -1,20 +1,19 @@
 package org.codice.imaging.nitf.viewer;
 
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyVetoException;
 import java.io.IOException;
+import java.net.URL;
+import javax.imageio.ImageIO;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -28,8 +27,8 @@ public class GuiConfiguration {
     public JDesktopPane desktopPane() throws IOException {
         JDesktopPane desktopPane = new JDesktopPane();
 
-        desktopPane.setBackground(Color.GRAY);
-        desktopPane.add(titlePanel());
+        desktopPane.setBackground(Color.LIGHT_GRAY  );
+        desktopPane.setBorder(titlePanel());
         return desktopPane;
     }
 
@@ -55,27 +54,19 @@ public class GuiConfiguration {
     }
 
     @Bean
-    public JPanel titlePanel() {
-        JPanel titlePanel = new JPanel(new GridLayout(2, 1));
+    public JDesktopImage titlePanel() {
+        URL iconUrl = ClassLoader.getSystemClassLoader().getResource(
+                "images/background.png");
 
-        JLabel startupLabel1 = new JLabel();
-        startupLabel1.setText(title() + " (DUN-FOR)");
-        startupLabel1.setHorizontalAlignment(JLabel.CENTER);
-        startupLabel1.setVerticalAlignment(JLabel.BOTTOM);
-        Font defaultLabelFont = startupLabel1.getFont();
-        int fontSize = defaultLabelFont.getSize();
-        startupLabel1.setFont(new Font(defaultLabelFont.getName(), Font.PLAIN, fontSize));
-        titlePanel.add(startupLabel1);
+        BufferedImage img = null;
 
-        JLabel startupLabel2 = new JLabel();
-        startupLabel2.setText(copyright());
-        startupLabel2.setHorizontalAlignment(JLabel.CENTER);
-        startupLabel2.setVerticalAlignment(JLabel.TOP);
-        startupLabel2.setFont(new Font(defaultLabelFont.getName(), Font.PLAIN, fontSize - 2));
-        startupLabel2.setForeground(Color.BLUE);
-        titlePanel.add(startupLabel2);
+        try {
+            img = ImageIO.read(iconUrl);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        return titlePanel;
+        return new JDesktopImage(img);
     }
 
     @Bean
