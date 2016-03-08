@@ -21,13 +21,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class GuiConfiguration {
+public class ViewConfiguration {
 
     @Bean
     public JDesktopPane desktopPane() throws IOException {
         JDesktopPane desktopPane = new JDesktopPane();
 
-        desktopPane.setBackground(Color.LIGHT_GRAY  );
+        desktopPane.setBackground(Color.LIGHT_GRAY);
         desktopPane.setBorder(titlePanel());
         return desktopPane;
     }
@@ -55,8 +55,8 @@ public class GuiConfiguration {
 
     @Bean
     public JDesktopImage titlePanel() {
-        URL iconUrl = ClassLoader.getSystemClassLoader().getResource(
-                "images/background.png");
+        URL iconUrl = ClassLoader.getSystemClassLoader()
+                .getResource("images/background.png");
 
         BufferedImage img = null;
 
@@ -82,8 +82,8 @@ public class GuiConfiguration {
     }
 
     @Bean
-    public GuiManager nitfGuiManager() {
-        return new GuiManager();
+    public ViewManager nitfGuiManager() {
+        return new ViewManager();
     }
 
     @Bean
@@ -98,11 +98,6 @@ public class GuiConfiguration {
     public JMenu imageMenu() {
         JMenu tabMenu = new JMenu("Image");
         tabMenu.setMnemonic(KeyEvent.VK_T);
-
-        JMenuItem closeTabItem = new JMenuItem("Close", KeyEvent.VK_C);
-        closeTabItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.ALT_MASK));
-        closeTabItem.addActionListener(e -> nitfGuiManager().closeTab(mainPanel().getSelectedIndex()));
-        tabMenu.add(closeTabItem);
 
         JMenuItem saveImageItem = new JMenuItem("Save Image", KeyEvent.VK_S);
         saveImageItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.ALT_MASK));
@@ -142,23 +137,28 @@ public class GuiConfiguration {
         JMenu zoomMenu = new JMenu("Zoom");
 
         JMenuItem oneHundredPercent = new JMenuItem("100%");
-        oneHundredPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface().setScale(1.0));
+        oneHundredPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface()
+                .setScale(1.0));
         zoomMenu.add(oneHundredPercent);
 
         JMenuItem seventyFivePercent = new JMenuItem("75%");
-        seventyFivePercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface().setScale(0.5));
+        seventyFivePercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface()
+                .setScale(0.5));
         zoomMenu.add(seventyFivePercent);
 
         JMenuItem fiftyPercent = new JMenuItem("50%");
-        fiftyPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface().setScale(0.5));
+        fiftyPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface()
+                .setScale(0.5));
         zoomMenu.add(fiftyPercent);
 
         JMenuItem twentyFivePercent = new JMenuItem("25%");
-        twentyFivePercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface().setScale(0.25));
+        twentyFivePercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface()
+                .setScale(0.25));
         zoomMenu.add(twentyFivePercent);
 
         JMenuItem tenPercent = new JMenuItem("10%");
-        tenPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface().setScale(0.10));
+        tenPercent.addActionListener(e -> nitfGuiManager().getActivePaintSurface()
+                .setScale(0.10));
         zoomMenu.add(tenPercent);
 
         return zoomMenu;

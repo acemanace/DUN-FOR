@@ -1,24 +1,17 @@
 package org.codice.imaging.nitf.viewer;
 
-import java.awt.BorderLayout;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyVetoException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import javax.imageio.ImageIO;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
-import javax.swing.JInternalFrame;
-import javax.swing.JPanel;
-import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingUtilities;
@@ -26,15 +19,20 @@ import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.codice.imaging.nitf.core.NitfFileHeader;
-import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
+import org.codice.imaging.nitf.core.image.ImageSegment;
+import org.codice.imaging.nitf.fluent.ImageDataStrategySupplier;
+import org.codice.imaging.nitf.fluent.NitfParserInputFlow;
 import org.codice.imaging.nitf.render.NitfRenderer;
-import org.codice.imaging.nitf.render.flow.NitfParserInputFlow;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import net.coobird.thumbnailator.Thumbnails;
 
 @Component
-public class GuiManager {
+public class ViewManager {
+    private static final int MAX_CHIP_ZOOM = 1200;
+
+    private static Set<ProgressMonitor> runningMonitors = new HashSet<>();
+
     @Autowired
     private JDesktopPane desktopPane;
 
@@ -47,25 +45,8 @@ public class GuiManager {
     @Autowired
     private JTextArea logPanel;
 
-    private static final int MAX_CHIP_ZOOM = 1200;
-
-    private static final Map<String, NitfFileHeader> FILE_HEADER_MAP = new HashMap<>();
-
-    private static Set<ProgressMonitor> runningMonitors = new HashSet<>();
-
-    public JTabbedPane getActiveTabbedPane() {
-        JInternalFrame internalFrame = desktopPane.getSelectedFrame();
-        JTabbedPane tabbedPane = (JTabbedPane) internalFrame.getContentPane().getComponent(0);
-        return tabbedPane;
-    }
-
-    public PaintSurface getActivePaintSurface() {
-        JTabbedPane tabbedPane = getActiveTabbedPane();
-        PropertiesImageTab propertiesImageTab = (PropertiesImageTab) tabbedPane.getSelectedComponent();
-        return propertiesImageTab.getPaintSurface();
-    }
-
-    static void startProgressMonitor(ProgressMonitor progressMonitor, int initialProgress, int maxIncrement) {
+    static void startProgressMonitor(ProgressMonitor progressMonitor, int initialProgress,
+            int maxIncrement) {
         runningMonitors.add(progressMonitor);
         Random random = new Random();
 
@@ -76,8 +57,7 @@ public class GuiManager {
                 ThreadLocal<Integer> progress = new ThreadLocal<>();
                 progress.set(initialProgress);
 
-                while (!progressMonitor.isCanceled() &&
-                        runningMonitors.contains(progressMonitor)) {
+                while (!progressMonitor.isCanceled() && runningMonitors.contains(progressMonitor)) {
                     progressMonitor.setProgress(progress.get());
                     Thread.sleep(500);
                     progress.set(progress.get() + random.nextInt(maxIncrement) + 1);
@@ -97,29 +77,41 @@ public class GuiManager {
 
     static void haltProgressMonitor(ProgressMonitor progressMonitor) {
 
-        SwingUtilities.invokeLater( () -> {
+        SwingUtilities.invokeLater(() -> {
             if (runningMonitors.contains(progressMonitor)) {
                 runningMonitors.remove(progressMonitor);
             }
 
             progressMonitor.setProgress(progressMonitor.getMaximum());
-        } );
+        });
+    }
+
+    public NitfInternalFrame getActiveInternalFrame() {
+        NitfInternalFrame internalFrame = (NitfInternalFrame) desktopPane.getSelectedFrame();
+        return internalFrame;
+    }
+
+    public PaintSurface getActivePaintSurface() {
+        PropertiesImageTab propertiesImageTab = getActiveInternalFrame().getSelectedTab();
+        return propertiesImageTab.getImagePanel().getPaintSurface();
     }
 
     public void createChip(String chipName) {
+        BufferedImage selectedArea = getSelectedAreaImage();
+        NitfInternalFrame nitfInternalFrame = getActiveInternalFrame();
+        PropertiesImageTab activeTab = nitfInternalFrame.getSelectedTab();
+
+        NitfFileHeader nitfFileHeader = nitfInternalFrame.getNitfFileHeader();
+        ImageSegment imageSegment = activeTab.getImageSegment();
+
+        NitfInternalFrame chipInternalFrame = prepareNewFrame(nitfFileHeader);
+        chipInternalFrame.addPropertiesImageTab(selectedArea, imageSegment);
+    }
+
+    private BufferedImage getSelectedAreaImage() {
         PaintSurface activePaintSurface = getActivePaintSurface();
         BufferedImage bi = activePaintSurface.getSelectedAreaImage();
-        JInternalFrame chipInternalFrame = new JInternalFrame(chipName, true, true, true, true);
-        desktopPane.add(chipInternalFrame);
-        ImagePanel imagePanel = new ImagePanel(bi, MAX_CHIP_ZOOM);
-        imagePanel.setOpaque(false);
-        imagePanel.getPaintSurface().setScale(activePaintSurface.getScale());
-
-        chipInternalFrame.setVisible(true);
-        chipInternalFrame.getContentPane().setLayout(new BorderLayout());
-        chipInternalFrame.getContentPane().add(imagePanel, BorderLayout.CENTER);
-        chipInternalFrame.setSize(imagePanel.getPreferredSize());
-        imagePanel.repaint();
+        return bi;
     }
 
     public void saveCurrentTabImage() {
@@ -157,9 +149,12 @@ public class GuiManager {
     }
 
     public void createThumbnail() {
-        JTabbedPane activeTabbedPane = getActiveTabbedPane();
         fileChooser.setDialogTitle("Create thumbnail (.jpg)");
-        FileFilter fileFilter = new FileNameExtensionFilter("JPEG File", "jpg", "JPG", "jpeg", "JPEG");
+        FileFilter fileFilter = new FileNameExtensionFilter("JPEG File",
+                "jpg",
+                "JPG",
+                "jpeg",
+                "JPEG");
         fileChooser.setFileFilter(fileFilter);
         int c = fileChooser.showSaveDialog(desktopPane);
 
@@ -174,12 +169,13 @@ public class GuiManager {
 
             SwingWorker<Void, Void> worker = new SwingWorker() {
                 protected Object doInBackground() {
-                        info("Creating thumbnail: " + fileChooser.getSelectedFile().getName());
-                        startProgressMonitor(progressMonitor, 10, 3);
-                        createThumbnail(bi, fileChooser.getSelectedFile());
+                    info("Creating thumbnail: " + fileChooser.getSelectedFile()
+                            .getName());
+                    startProgressMonitor(progressMonitor, 10, 3);
+                    createThumbnail(bi, fileChooser.getSelectedFile());
 
-                        haltProgressMonitor(progressMonitor);
-                        info("Thumbnail created.");
+                    haltProgressMonitor(progressMonitor);
+                    info("Thumbnail created.");
                     return null;
                 }
             };
@@ -210,59 +206,63 @@ public class GuiManager {
         }
     }
 
-    private void addPropertiesImageTabToFrame(File imagePath, BufferedImage bufferedImage,
-            NitfImageSegmentHeader imageSegmentHeader, JTabbedPane mainPanel) {
-        String tabName = imagePath.getName();
-        tabName = tabName.substring(0, tabName.length() - 4);
-
-        NitfFileHeader fileHeader = FILE_HEADER_MAP.get(imagePath.getName());
-        PropertiesImageTab propertiesImageTab = tabPanelFactory.createNitfImagePanel(bufferedImage,
-                fileHeader,
-                imageSegmentHeader);
-
-        JPanel tab = tabPanelFactory.createTab(tabName);
-        mainPanel.addTab(tabName, propertiesImageTab);
-        mainPanel.setSelectedComponent(propertiesImageTab);
-        mainPanel.setTabComponentAt(mainPanel.getSelectedIndex(), tab);
-
-        SwingUtilities.invokeLater(() -> propertiesImageTab.setDividerLocation(0.85d));
-    }
-
-    private void render(File nitfRgbFile,
-            BiConsumer<BufferedImage, NitfImageSegmentHeader> consumer) {
+    private void parseAndRender(File nitfRgbFile) {
 
         ProgressMonitor progressMonitor = new ProgressMonitor(desktopPane,
-                "Loading File: " + nitfRgbFile.getName(), "", 0, 100);
+                "Loading File: " + nitfRgbFile.getName(),
+                "",
+                0,
+                100);
+
+        ThreadLocal<NitfInternalFrame> nitfInternalFrame = new ThreadLocal<NitfInternalFrame>();
 
         try {
             startProgressMonitor(progressMonitor, 0, 5);
             info("Parsing file: " + nitfRgbFile.getName());
-            new NitfParserInputFlow().file(nitfRgbFile)
+            new NitfParserInputFlow()
+                    .file(nitfRgbFile)
+                    .imageDataStrategy(new ImageDataStrategySupplier()
+                                        .configure(1024 * 1024 * 300,
+                                                   size -> 3 * size < getPresumableFreeMemory(),
+                                                   size -> 5 * size > getPresumableFreeMemory()))
                     .imageData()
-                    .fileHeader(header -> FILE_HEADER_MAP.put(nitfRgbFile.getName(), header))
-                    .forEachImage((segment, bytes) -> {
+                    .fileHeader(header -> nitfInternalFrame.set(prepareNewFrame(header)))
+                    .forEachImageSegment((segment) -> {
                         NitfRenderer renderer = new NitfRenderer();
+                        BufferedImage img = null;
 
                         try {
-                            BufferedImage img = renderer.render(segment, bytes);
-                            consumer.accept(img, segment);
-                        } catch (IOException|UnsupportedOperationException e) {
-                            BufferedImage img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
-                            consumer.accept(img, segment);
-                            error("Couldn't render image: " + e.getMessage());
+                            if (segment.getData() != null) {
+                                img = renderer.render(segment);
+                            }
+
+                            nitfInternalFrame.get().addPropertiesImageTab(img, segment);
+                        } catch (IOException | UnsupportedOperationException e) {
+                            img = new BufferedImage(10,
+                                    10,
+                                    BufferedImage.TYPE_INT_ARGB);
+                            nitfInternalFrame.get().addPropertiesImageTab(img, segment);
+                            error("Couldn't parseAndRender image: " + e.getMessage());
                         }
                     });
 
             info("File parsed and rendered.");
-        } catch (ParseException|FileNotFoundException e) {
+        } catch (ParseException | FileNotFoundException e) {
             error("Couldn't parse file: " + e.getMessage());
         } finally {
             haltProgressMonitor(progressMonitor);
         }
     }
 
-    private JTabbedPane prepareNewFrame(String frameName) {
-        JInternalFrame internalFrame = new JInternalFrame(frameName, true, true, true, true);
+
+    private double getPresumableFreeMemory() {
+        long allocatedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime()
+                .freeMemory());
+        return Runtime.getRuntime().maxMemory() - allocatedMemory;
+    }
+
+    private NitfInternalFrame prepareNewFrame(NitfFileHeader nitfFileHeader) {
+        NitfInternalFrame internalFrame = new NitfInternalFrame(nitfFileHeader, tabPanelFactory);
         desktopPane.add(internalFrame);
         internalFrame.setVisible(true);
 
@@ -272,28 +272,39 @@ public class GuiManager {
             e.printStackTrace();
         }
 
-        JTabbedPane mainPanel = new JTabbedPane();
-        internalFrame.getContentPane().add(mainPanel, BorderLayout.CENTER);
-        return mainPanel;
+        return internalFrame;
     }
 
     public void openFile() {
         fileChooser.setDialogTitle("Open NITF");
-        FileFilter fileFilter = new FileNameExtensionFilter("NITF File", "ntf", "nitf", "nsf", "NTF", "NITF", "NSF");
+        FileFilter fileFilter = new FileNameExtensionFilter("NITF File",
+                "ntf",
+                "nitf",
+                "nsf",
+                "NTF",
+                "NITF",
+                "NSF");
         fileChooser.setFileFilter(fileFilter);
         int userSelection = fileChooser.showOpenDialog(desktopPane);
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File path = fileChooser.getSelectedFile();
-            JTabbedPane mainPanel = prepareNewFrame(path.getName());
-
             info("Opening file: " + path.getName());
 
             SwingWorker<Void, Void> worker = new SwingWorker() {
                 @Override
-                protected Object doInBackground() throws Exception {
-                    render(path, (img, header) -> addPropertiesImageTabToFrame(path, img, header, mainPanel));
-                    System.gc();
+                protected Object doInBackground ()throws Exception {
+                    try {
+                        long startTime = System.currentTimeMillis();
+
+                        parseAndRender(path);
+                        long endTime = System.currentTimeMillis();
+                        System.gc();
+                    } catch (Throwable t) {
+                        System.err.println(t.getMessage());
+                        t.printStackTrace();
+                    }
+
                     return null;
                 }
             };
@@ -302,22 +313,6 @@ public class GuiManager {
         }
 
         fileChooser.removeChoosableFileFilter(fileFilter);
-    }
-
-    public void closeTab(String tabName) {
-        JTabbedPane mainPanel = getActiveTabbedPane();
-        int index = mainPanel.indexOfTab(tabName);
-        closeTab(index);
-    }
-
-    public void closeTab(int index) {
-        JTabbedPane mainPanel = getActiveTabbedPane();
-        mainPanel.removeTabAt(index);
-        System.gc();
-
-        if (mainPanel.getSelectedIndex() == -1) {
-            desktopPane.repaint();
-        }
     }
 
     public void info(String message) {
