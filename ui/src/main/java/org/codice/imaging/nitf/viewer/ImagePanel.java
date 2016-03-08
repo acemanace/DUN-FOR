@@ -11,6 +11,7 @@ import javax.swing.event.ChangeListener;
 
 public class ImagePanel extends JPanel {
     private PaintSurface paintSurface;
+
     private JSlider slider;
 
     public ImagePanel(BufferedImage bufferedImage, int maxZoom) {
@@ -34,7 +35,7 @@ public class ImagePanel extends JPanel {
             @Override
             public void stateChanged(ChangeEvent e) {
                 if (!slider.getValueIsAdjusting()) {
-                    paintSurface.setScale(slider.getValue()/100.0);
+                    paintSurface.setScale(slider.getValue() / 100.0);
                     imagePane.setPreferredSize(paintSurface.getPreferredSize());
                     imagePane.repaint();
                 }

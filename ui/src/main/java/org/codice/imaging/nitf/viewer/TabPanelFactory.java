@@ -9,8 +9,10 @@ import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import org.codice.imaging.nitf.core.NitfFileHeader;
-import org.codice.imaging.nitf.core.image.NitfImageSegmentHeader;
+import javax.swing.JTabbedPane;
+
+import org.codice.imaging.nitf.core.header.NitfHeader;
+import org.codice.imaging.nitf.core.image.ImageSegment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,11 +20,10 @@ import org.springframework.stereotype.Component;
 class TabPanelFactory {
 
     @Autowired
-    private GuiManager guiManager;
+    private ViewManager ViewManager;
 
     PropertiesImageTab createNitfImagePanel(final BufferedImage bufferedImage,
-            final NitfFileHeader fileHeader,
-            final NitfImageSegmentHeader header) {
+            final NitfHeader fileHeader, final ImageSegment header) {
 
         return new PropertiesImageTab(bufferedImage, fileHeader, header);
     }
@@ -33,18 +34,20 @@ class TabPanelFactory {
         panel.setOpaque(false);
         panel.add(new JLabel(tabName));
 
-        URL iconUrl = ClassLoader.getSystemClassLoader().getResource(
-                "images/Close_Tab.png");
-        URL pressedIconUrl = ClassLoader.getSystemClassLoader().getResource(
-                "images/Close_Tab-pressed.png");
+        URL iconUrl = ClassLoader.getSystemClassLoader()
+                .getResource("images/Close_Tab.png");
+        URL pressedIconUrl = ClassLoader.getSystemClassLoader()
+                .getResource("images/Close_Tab-pressed.png");
 
         ImageIcon icon = new ImageIcon(iconUrl, "close this tab");
         ImageIcon pressedIcon = new ImageIcon(pressedIconUrl);
         JLabel closeLabel = new JLabel(icon);
 
-        closeLabel.addMouseListener(new MouseAdapter(){
+        closeLabel.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                guiManager.closeTab(tabName);
+                System.out.println("closing...");
+                JTabbedPane jTabbedPane = ViewManager.getActiveInternalFrame().getjTabbedPane();
+                jTabbedPane.remove(jTabbedPane.indexOfTabComponent(panel));
             }
 
             public void mousePressed(MouseEvent e) {

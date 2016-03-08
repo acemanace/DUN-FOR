@@ -9,27 +9,30 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 public class Viewer {
     public static void main(String... args) throws InterruptedException {
-        UIManager.getDefaults().put("TabbedPane.contentBorderInsets", new Insets(0,0,0,0));
-        UIManager.getDefaults().put("TabbedPane.tabsOverlapBorder", true);
+        UIManager.getDefaults()
+                .put("TabbedPane.contentBorderInsets", new Insets(0, 0, 0, 0));
+        UIManager.getDefaults()
+                .put("TabbedPane.tabsOverlapBorder", true);
 
         try {
-            UIManager.setLookAndFeel(
-                    UIManager.getSystemLookAndFeelClassName());
+            UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        catch (Exception e) {}
 
         JFrame.setDefaultLookAndFeelDecorated(true);
 
-        ApplicationContext context =
-                new AnnotationConfigApplicationContext(GuiConfiguration.class);
-
+        ApplicationContext context = new AnnotationConfigApplicationContext(ViewConfiguration.class);
         JFrame topFrame = context.getBean(JFrame.class, "topFrame");
+
         topFrame.setVisible(true);
-        GuiManager guiManager = context.getBean(GuiManager.class, "guiManager");
+        ViewManager ViewManager = context.getBean(ViewManager.class, "ViewManager");
         Toolkit tk = Toolkit.getDefaultToolkit();
-        int xSize = ((int) tk.getScreenSize().getWidth());
-        int ySize = ((int) tk.getScreenSize().getHeight());
-        topFrame.setSize(xSize,ySize);
-        guiManager.openFile();
+        int xSize = ((int) tk.getScreenSize()
+                .getWidth());
+        int ySize = ((int) tk.getScreenSize()
+                .getHeight());
+        topFrame.setSize(xSize, ySize);
+        ViewManager.openFile();
     }
 }

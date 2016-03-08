@@ -22,7 +22,7 @@ public class JDesktopImage implements Border {
     }
 
     public Insets getBorderInsets(Component c) {
-        return new Insets(0,0,0,0);
+        return new Insets(0, 0, 0, 0);
     }
 
     public boolean isBorderOpaque() {
