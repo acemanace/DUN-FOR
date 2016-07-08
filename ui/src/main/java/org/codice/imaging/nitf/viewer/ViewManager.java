@@ -1,19 +1,6 @@
 package org.codice.imaging.nitf.viewer;
 
-import java.awt.image.BufferedImage;
-import java.beans.PropertyVetoException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
-
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
-import javax.swing.filechooser.FileNameExtensionFilter;
-
+import net.coobird.thumbnailator.Thumbnails;
 import org.codice.imaging.nitf.core.common.NitfFormatException;
 import org.codice.imaging.nitf.core.header.NitfHeader;
 import org.codice.imaging.nitf.core.image.ImageSegment;
@@ -22,7 +9,18 @@ import org.codice.imaging.nitf.render.NitfRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import net.coobird.thumbnailator.Thumbnails;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.image.BufferedImage;
+import java.beans.PropertyVetoException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 
 @Component
 public class ViewManager {

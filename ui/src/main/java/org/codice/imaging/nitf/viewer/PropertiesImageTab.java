@@ -1,15 +1,14 @@
 package org.codice.imaging.nitf.viewer;
 
-import java.awt.image.BufferedImage;
-import java.util.function.Supplier;
-
-import javax.swing.*;
-
 import org.codice.imaging.nitf.core.header.NitfHeader;
 import org.codice.imaging.nitf.core.image.ImageCoordinatePair;
 import org.codice.imaging.nitf.core.image.ImageCoordinates;
 import org.codice.imaging.nitf.core.image.ImageSegment;
 import org.codice.imaging.nitf.core.security.FileSecurityMetadata;
+
+import javax.swing.*;
+import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 
 public class PropertiesImageTab extends JSplitPane {
 
