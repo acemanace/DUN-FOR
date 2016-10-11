@@ -2,10 +2,15 @@ package org.codice.imaging.nitf.viewer;
 
 import java.awt.Insets;
 import java.awt.Toolkit;
+
+import javax.imageio.ImageIO;
+import javax.imageio.spi.IIORegistry;
 import javax.swing.JFrame;
 import javax.swing.UIManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import com.github.jaiimageio.jpeg2000.impl.J2KImageReaderSpi;
 
 public class Viewer {
     public static void main(String... args) throws InterruptedException {
@@ -33,6 +38,9 @@ public class Viewer {
         int ySize = ((int) tk.getScreenSize()
                 .getHeight());
         topFrame.setSize(xSize, ySize);
+
+        IIORegistry.getDefaultInstance()
+                .registerServiceProvider(new J2KImageReaderSpi());
         ViewManager.openFile();
     }
 }
