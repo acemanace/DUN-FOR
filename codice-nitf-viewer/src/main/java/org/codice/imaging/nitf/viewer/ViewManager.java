@@ -1,6 +1,7 @@
 package org.codice.imaging.nitf.viewer;
 
 import net.coobird.thumbnailator.Thumbnails;
+import org.codice.imaging.nitf.core.InMemoryHeapStrategy;
 import org.codice.imaging.nitf.core.common.NitfFormatException;
 import org.codice.imaging.nitf.core.header.NitfHeader;
 import org.codice.imaging.nitf.core.image.ImageSegment;

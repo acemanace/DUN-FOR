@@ -173,7 +173,7 @@ public class ViewConfiguration {
 
     @Bean
     public String title() {
-        return "Don's Ultimate NITF-File Optical Renderer";
+        return "Codice Nitf Browser";
     }
 
     @Bean
