@@ -16,10 +16,13 @@ package org.codice.imaging.nitf.nitfpeek;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 import org.codice.imaging.nitf.core.common.DateTime;
+import org.codice.imaging.nitf.core.image.ImageCoordinatesRepresentation;
 import org.codice.imaging.nitf.core.image.ImageSegment;
 
 
@@ -27,13 +30,12 @@ import org.codice.imaging.nitf.core.image.ImageSegment;
  * NitfAttributes to represent the properties of a ImageSegment.
  */
 enum ImageAttribute {
-
     FILE_PART_TYPE("filePartType", "IM", header -> "IM"),
     IMAGE_IDENTIFIER_1("imageIdentifier1", "IID1", ImageSegment::getIdentifier),
     IMAGE_DATE_AND_TIME("imageDateAndTime", "IDATIM",
             header -> convertNitfDate(header.getImageDateTime())),
     TARGET_IDENTIFIER("targetIdentifier", "TGTID",
-            header -> header.getImageTargetId().toString().trim()),
+            ImageAttribute::getTargetId),
     IMAGE_IDENTIFIER_2("imageIdentifier2", "IID2", ImageSegment::getImageIdentifier2),
     IMAGE_SECURITY_CLASSIFICATION("imageSecurityClassification", "ISCLAS",
             header -> header.getSecurityMetadata().getSecurityClassification().name()),
@@ -106,13 +108,16 @@ enum ImageAttribute {
     IMAGE_DISPLAY_LEVEL("imageDisplayLevel", "IDLVL", ImageSegment::getImageDisplayLevel),
     IMAGE_ATTACHMENT_LEVEL("imageAttachmentLevel", "IALVL",
             ImageSegment::getAttachmentLevel),
-    IMAGE_LOCATION("imageLocation", "ILOC",
-            header -> header.getImageCoordinates().getCoordinate00().getLatitude() + ", " + header.getImageCoordinates().getCoordinate00().getLongitude() + ":"
-                    + header.getImageCoordinates().getCoordinate0MaxCol().getLatitude() + ", " + header.getImageCoordinates().getCoordinate0MaxCol().getLongitude()
-                    + header.getImageCoordinates().getCoordinateMaxRowMaxCol().getLatitude() + ", " + header.getImageCoordinates().getCoordinateMaxRowMaxCol().getLongitude()
-                    + header.getImageCoordinates().getCoordinateMaxRow0().getLatitude() + ", " + header.getImageCoordinates().getCoordinateMaxRow0().getLongitude()),
+    IMAGE_LOCATION("imageLocation", "ILOC", ImageAttribute::getCoordinates),
     IMAGE_MAGNIFICATION("imageMagnification", "IMAG",
             header -> header.getImageMagnification().trim());
+
+    private final static ImageCoordinatesRepresentation[] SUPPORTED_COORDINATE_REPRESENTATION_ARRAY =
+            {ImageCoordinatesRepresentation.DECIMALDEGREES, ImageCoordinatesRepresentation.GEOGRAPHIC,
+                    ImageCoordinatesRepresentation.MGRS, ImageCoordinatesRepresentation.UTMNORTH, ImageCoordinatesRepresentation.UTMSOUTH};
+
+    private final static List<ImageCoordinatesRepresentation> SUPPORTED_COORDINATE_REPRESENTATION_LIST =
+            Arrays.asList(SUPPORTED_COORDINATE_REPRESENTATION_ARRAY);
 
     public static final String ATTRIBUTE_NAME_PREFIX = "nitf.image.";
 
@@ -154,6 +159,37 @@ enum ImageAttribute {
 
     public Function<ImageSegment, Serializable> getAccessorFunction() {
         return accessorFunction;
+    }
+
+    public static String getTargetId(ImageSegment segment) {
+        try {
+            return segment.getImageTargetId()
+                    .textValue()
+                    .trim();
+        } catch (Exception e) {
+            e.printStackTrace();
+            //todo: replace with logging
+        }
+
+        return "";
+    }
+
+    private static String getCoordinates(ImageSegment header) {
+        if (header.getImageCoordinatesRepresentation() == ImageCoordinatesRepresentation.NONE) {
+            return "NONE";
+        }
+
+        if (SUPPORTED_COORDINATE_REPRESENTATION_LIST.contains(header.getImageCoordinatesRepresentation())) {
+            return header.getImageCoordinates().getCoordinate00().getLatitude() + ", " + header.getImageCoordinates().getCoordinate00().getLongitude() + ":"
+                   + header.getImageCoordinates().getCoordinate0MaxCol().getLatitude() + ", " + header.getImageCoordinates().getCoordinate0MaxCol().getLongitude()
+                   + header.getImageCoordinates().getCoordinateMaxRowMaxCol().getLatitude() + ", " + header.getImageCoordinates().getCoordinateMaxRowMaxCol().getLongitude()
+                   + header.getImageCoordinates().getCoordinateMaxRow0().getLatitude() + ", " + header.getImageCoordinates().getCoordinateMaxRow0().getLongitude();
+        }
+
+        return header.getImageCoordinates().getCoordinate00().getSourceFormat() + ", " +
+                header.getImageCoordinates().getCoordinate0MaxCol().getSourceFormat() + ", " +
+                header.getImageCoordinates().getCoordinateMaxRow0().getSourceFormat() + ", " +
+                header.getImageCoordinates().getCoordinateMaxRowMaxCol().getSourceFormat();
     }
 
     public String toString() {

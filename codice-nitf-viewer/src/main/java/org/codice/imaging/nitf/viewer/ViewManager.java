@@ -1,11 +1,10 @@
 package org.codice.imaging.nitf.viewer;
 
 import net.coobird.thumbnailator.Thumbnails;
-import org.codice.imaging.nitf.core.InMemoryHeapStrategy;
 import org.codice.imaging.nitf.core.common.NitfFormatException;
 import org.codice.imaging.nitf.core.header.NitfHeader;
 import org.codice.imaging.nitf.core.image.ImageSegment;
-import org.codice.imaging.nitf.fluent.NitfParserInputFlow;
+import org.codice.imaging.nitf.fluent.impl.NitfParserInputFlowImpl;
 import org.codice.imaging.nitf.render.NitfRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -215,7 +214,7 @@ public class ViewManager {
         try {
             startProgressMonitor(progressMonitor, 0, 5);
             info("Parsing file: " + nitfRgbFile.getName());
-            new NitfParserInputFlow()
+            new NitfParserInputFlowImpl()
                     .file(nitfRgbFile)
                     .allData()
                     .fileHeader(header -> nitfInternalFrame.set(prepareNewFrame(header)))

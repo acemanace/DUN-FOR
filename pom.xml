@@ -11,10 +11,15 @@
     <packaging>pom</packaging>
 
     <properties>
-        <imaging-nitf.version>0.6</imaging-nitf.version>
+        <imaging-nitf.version>0.8</imaging-nitf.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.codice.imaging.nitf</groupId>
+            <artifactId>codice-imaging-nitf-core-api</artifactId>
+            <version>${imaging-nitf.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.codice.imaging.nitf</groupId>
             <artifactId>codice-imaging-nitf-core</artifactId>
@@ -22,12 +27,34 @@
         </dependency>
         <dependency>
             <groupId>org.codice.imaging.nitf</groupId>
+            <artifactId>codice-imaging-nitf-fluent</artifactId>
+            <version>${imaging-nitf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.imaging.nitf</groupId>
             <artifactId>codice-imaging-nitf-fluent-api</artifactId>
             <version>${imaging-nitf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.7</version>
         </dependency>
     </dependencies>
     <modules>
         <module>codice-nitf-viewer</module>
         <module>codice-nitf-peek</module>
     </modules>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

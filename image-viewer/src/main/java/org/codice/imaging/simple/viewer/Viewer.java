@@ -1,4 +1,4 @@
-package org.codice.imaging.nitf.viewer;
+package org.codice.imaging.simple.viewer;
 
 import java.awt.*;
 
@@ -18,7 +18,7 @@ public class Viewer {
                 .put("TabbedPane.tabsOverlapBorder", true);
 
         try {
-            UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }

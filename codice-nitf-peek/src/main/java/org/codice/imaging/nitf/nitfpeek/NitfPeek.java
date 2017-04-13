@@ -2,6 +2,7 @@ package org.codice.imaging.nitf.nitfpeek;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -20,10 +21,12 @@ import org.apache.commons.lang.StringUtils;
 import org.codice.imaging.nitf.core.common.NitfFormatException;
 import org.codice.imaging.nitf.core.header.NitfHeader;
 import org.codice.imaging.nitf.core.image.ImageSegment;
-import org.codice.imaging.nitf.fluent.NitfParserInputFlow;
+import org.codice.imaging.nitf.fluent.impl.NitfParserInputFlowImpl;
 
 public class NitfPeek {
     private static boolean dumpImageHeader = false;
+
+    private static boolean extractImageData = false;
 
     public static void main(String[] args)
             throws ParseException, IOException, java.text.ParseException, NitfFormatException {
@@ -46,9 +49,15 @@ public class NitfPeek {
                 .desc("dump out image header information.")
                 .build();
 
+        Option extractImageOption = Option.builder("x")
+                .hasArg(false)
+                .desc("extact the image data.")
+                .build();
+
         options.addOption(fileOption);
         options.addOption(recursiveOption);
         options.addOption(imageHeaderOption);
+        options.addOption(extractImageOption);
 
         CommandLineParser commandLineParser = new DefaultParser();
         CommandLine commandLine = commandLineParser.parse(options, args);
@@ -59,6 +68,10 @@ public class NitfPeek {
         }
 
         Path path = null;
+
+        if (commandLine.hasOption("x")) {
+            extractImageData = true;
+        }
 
         if (commandLine.hasOption("i")) {
             dumpImageHeader = true;
@@ -77,12 +90,37 @@ public class NitfPeek {
 
     private static void processSingleFile(File file)
             throws FileNotFoundException, java.text.ParseException, NitfFormatException {
-        new NitfParserInputFlow()
+        new NitfParserInputFlowImpl()
                 .file(file)
                 .allData()
-                .fileHeader(header -> dumpFileHeader(header))
-                .forEachImageSegment(segment -> dumpImageHeader(segment))
-                ;
+                .fileHeader(NitfPeek::dumpFileHeader)
+                .forEachImageSegment(NitfPeek::dumpImageHeader)
+                .forEachImageSegment(NitfPeek::extractImages);
+    }
+
+    private static void extractImages(ImageSegment imageSegment) {
+        if (extractImageData) {
+            String outputFileName = imageSegment.getIdentifier();
+
+            if (outputFileName == null || outputFileName.length() == 0) {
+                outputFileName = imageSegment.getImageIdentifier2().replace(" ", "");
+            }
+
+            if (outputFileName == null || outputFileName.length() == 0) {
+                outputFileName = "tmp_" + (Math.round(Math.random() * 1000)) + "." + imageSegment.getImageCompression().getTextEquivalent();
+                System.err.println("WARNING: image header does contain image identifier 2 (IID2) value. Saving as '" + outputFileName + "'.");
+            }
+
+            File outputFile = new File(outputFileName);
+
+            try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile);) {
+                byte[] bytes = new byte[(int) imageSegment.getDataLength()];
+                imageSegment.getData().readFully(bytes);
+                fileOutputStream.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void dumpImageHeader(ImageSegment segment) {
